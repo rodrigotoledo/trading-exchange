@@ -1,0 +1,103 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --surface: #1f2937;
+    --surface-secondary: #111827;
+    --surface-tertiary: #0f172a;
+
+    --primary: #f3f4f6;
+    --secondary: #9ca3af;
+    --tertiary: #6b7280;
+
+    --accent: #3b82f6;
+    --accent-hover: #2563eb;
+
+    --default: #374151;
+  }
+
+  html {
+    @apply h-full m-0 p-0;
+  }
+
+  #root {
+    @apply w-full h-full;
+  }
+
+  body {
+    @apply h-full m-0 p-0 text-sm;
+    color: var(--secondary);
+  }
+
+  a {
+    color: var(--accent);
+    transition-property: color;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+  }
+
+  a:hover {
+    color: var(--accent-hover);
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #2f3136;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #ff6b35;
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #ff8c5a;
+  }
+
+  /* Firefox scrollbar */
+  * {
+    scrollbar-color: #ff6b35 #2f3136;
+    scrollbar-width: thin;
+  }
+}
+
+@layer components {
+  .bg-surface {
+    @apply bg-[#36393f];
+  }
+  .bg-surface-secondary {
+    @apply bg-[#2f3136];
+  }
+  .bg-surface-tertiary {
+    @apply bg-[#202225];
+  }
+  .text-primary {
+    @apply text-[#dcddde];
+  }
+  .text-secondary {
+    @apply text-[#72767d];
+  }
+  .text-accent {
+    @apply text-[#ff6b35];
+  }
+  .bg-accent {
+    @apply bg-[#ff6b35];
+  }
+  .bg-accent-hover {
+    @apply bg-[#ff8c5a];
+  }
+  .border-default {
+    @apply border-[#202225];
+  }
+  .border-accent {
+    @apply border-[#ff6b35];
+  }
+  .shadow-accent {
+    @apply shadow-[0_0_16px_rgba(255,107,53,0.3)];
+  }
+}

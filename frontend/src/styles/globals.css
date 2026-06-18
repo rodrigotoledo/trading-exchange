@@ -1,0 +1,62 @@
+@layer base {
+  :root {
+    --surface: #1f2937;
+    --surface-secondary: #111827;
+    --surface-tertiary: #0f172a;
+
+    --primary: #f3f4f6;
+    --secondary: #9ca3af;
+    --tertiary: #6b7280;
+
+    --accent: #3b82f6;
+    --accent-hover: #2563eb;
+
+    --default: #374151;
+  }
+
+  body {
+    @apply text-sm text-secondary;
+  }
+
+  a {
+    @apply text-accent hover:text-accent-hover transition-colors;
+  }
+}
+
+@layer components {
+  .text-primary {
+    @apply text-[var(--primary)];
+  }
+
+  .text-secondary {
+    @apply text-[var(--secondary)];
+  }
+
+  .bg-surface {
+    @apply bg-[var(--surface)];
+  }
+
+  .bg-surface-secondary {
+    @apply bg-[var(--surface-secondary)];
+  }
+
+  .bg-surface-tertiary {
+    @apply bg-[var(--surface-tertiary)];
+  }
+
+  .border-default {
+    @apply border-[var(--default)];
+  }
+
+  .bg-accent {
+    @apply bg-[var(--accent)];
+  }
+
+  .bg-accent-hover {
+    @apply bg-[var(--accent-hover)];
+  }
+
+  .shadow-accent {
+    @apply shadow-lg shadow-[var(--accent)]/20;
+  }
+}
