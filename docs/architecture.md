@@ -1,544 +1,386 @@
-# Architecture Document
+# Architecture — Trading Exchange POC
 
 ## System Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                   Agent Skills Ecosystem                         │
-└─────────────────────────────────────────────────────────────────┘
-                               │
-        ┌──────────────────────┼──────────────────────┐
-        │                      │                      │
-        ▼                      ▼                      ▼
-    ┌────────┐            ┌────────────┐         ┌──────────┐
-    │  CLI   │            │ Marketplace│         │MCP Server│
-    │ (Node) │            │(Next.js 16)│         │  (Node)  │
-    └────────┘            └────────────┘         └──────────┘
-        │                      │                      │
-        └──────────────────────┼──────────────────────┘
-                               │
-                      ┌────────▼────────┐
-                      │  jsDelivr CDN   │
-                      │(skills-registry │
-                      │     .json)      │
-                      └────────────────┘
-                               │
-        ┌──────────────────────┼──────────────────────┐
-        │                      │                      │
-        ▼                      ▼                      ▼
-   ┌──────────┐         ┌──────────┐         ┌──────────┐
-   │ Cursor   │         │Claude Code│        │Copilot &  │
-   │ Windsurf │         │  + 16+    │        │ Others   │
-   └──────────┘         └──────────┘         └──────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                    Trading Exchange                          │
+│         (AI-Powered Crypto Analysis System)                 │
+└─────────────────────────────────────────────────────────────┘
+                           │
+        ┌──────────────────┼──────────────────┐
+        │                  │                  │
+        ▼                  ▼                  ▼
+   ┌─────────┐        ┌─────────┐       ┌────────────┐
+   │ Frontend│        │ Backend │       │  Ollama    │
+   │ (React) │        │(FastAPI)│       │ (Mistral)  │
+   │ Vite    │        │ Python  │       │ Local LLM  │
+   └─────────┘        └─────────┘       └────────────┘
+        │                  │                  │
+        └──────────────────┼──────────────────┘
+                           │
+        ┌──────────────────┼──────────────────┐
+        │                  │                  │
+        ▼                  ▼                  ▼
+   ┌──────────┐      ┌──────────┐      ┌──────────┐
+   │Public API│      │  News    │      │ Database │
+   │(Binance, │      │  Feed    │      │ (SQLite/ │
+   │ CoinGecko)      │  (RSS)   │      │ PostgreSQL)
+   └──────────┘      └──────────┘      └──────────┘
 ```
 
-## Monorepo Structure (Nx)
+## Architecture Components
 
-### Packages
+### 1. **Frontend (React + Vite + Tailwind)**
 
-#### 1. **`packages/cli`** — @tech-leads-club/agent-skills
-The primary user-facing CLI tool.
-
-**Purpose:**
-- Interactive TUI (React + Ink) for skill browsing & installation
-- Non-interactive CLI mode (Commander.js) for automation/CI
-- Skill fetching, caching, installation, lifecycle management
-- Lockfile (v2) creation and management
+**Purpose:** Real-time dashboard for viewing trading signals and analysis
 
 **Key Directories:**
 ```
-packages/cli/
+frontend/
 ├── src/
-│   ├── index.ts                    # Entry point
-│   ├── commands/                   # Commander.js CLI commands
-│   │   ├── install.ts
-│   │   ├── list.ts
-│   │   ├── remove.ts
-│   │   ├── update.ts
-│   │   └── ...
-│   ├── services/                   # Business logic
-│   │   ├── registry-service.ts     # Fetch & parse registry
-│   │   ├── installer-service.ts    # Install skills to agents
-│   │   ├── lockfile-service.ts     # Manage lockfile (v2)
-│   │   ├── cache-service.ts        # Disk caching
-│   │   ├── audit-service.ts        # Operation audit trail
-│   │   └── agents.ts               # Agent configs (19+ agents)
-│   ├── ui/                         # Ink/React TUI
-│   │   ├── components/
-│   │   └── screens/
-│   └── types/
-├── tests/
-├── package.json                    # Node ≥22
-└── tsconfig.json
-
-**Dependencies:**
-- commander (CLI parsing)
-- ink, react (TUI)
-- axios (HTTP)
-- zod (validation, lockfile)
-- chalk (colors)
-- listr2 (progress)
-```
-
-**Agent Configuration:**
-```typescript
-// src/services/agents.ts
-export const AGENT_CONFIGS = {
-  cursor: {
-    skillsDir: '~/.cursor/rules/skills',
-    globalSkillsDir: '~/.cursor/rules',
-    tier: 1,
-  },
-  'claude-code': {
-    skillsDir: '~/.claude/skills',
-    globalSkillsDir: '~/.claude',
-    tier: 1,
-  },
-  copilot: { /* ... */ },
-  // ... 19+ agents total
-};
-```
-
-#### 2. **`packages/skills-catalog`** — Skill Definitions
-Repository of all skill definitions.
-
-**Structure:**
-```
-packages/skills-catalog/
-├── skills/
-│   ├── (development)/              # Category (parentheses = metadata)
-│   │   ├── tlc-spec-driven/
-│   │   │   ├── SKILL.md            # Main instructions (YAML + markdown)
-│   │   │   ├── scripts/            # Executable scripts
-│   │   │   ├── templates/          # File templates
-│   │   │   └── references/         # On-demand documentation
-│   │   └── ...other skills...
-│   ├── (cloud)/
-│   │   ├── aws-advisor/
-│   │   └── ...
-│   ├── (automation)/
-│   │   ├── playwright-skill/
-│   │   └── ...
-│   ├── (design)/
-│   ├── (security)/
-│   └── ...
-├── src/
-│   └── generate-registry.ts        # Scans SKILL.md files → skills-registry.json
-├── package.json
-└── tsconfig.json
-
-**Skill Format (SKILL.md):**
-```yaml
----
-name: my-skill
-description: Brief description (max 1024 chars)
-author: "Name/GitHub"
-category: development | cloud | automation | design | security | ...
-tags: [tag1, tag2]
-compatibility: cursor | claude-code | all
-license: MIT | CC-BY-4.0 | ...
----
-
-# Skill Title
-
-[Instructions, trigger phrases, execution details in markdown]
-```
-
-**Key Files:**
-- **generate-registry.ts** — Scans all SKILL.md files
-  - Parses YAML frontmatter
-  - Computes SHA-256 content hashes
-  - Generates skills-registry.json (committed to repo, published to npm)
-  - Outputs skills.json for marketplace
-
-#### 3. **`packages/marketplace`** — Next.js 16 Site
-Interactive skill browsing & documentation.
-
-**Purpose:**
-- Static site deployed to GitHub Pages
-- Search & filter skills by category
-- Read skill descriptions, authors, compatibility
-- Integration guides for each agent
-- Community docs, contributing guides
-
-**Structure:**
-```
-packages/marketplace/
-├── src/
-│   ├── app/
-│   │   ├── page.tsx                # Home
-│   │   ├── skills/
-│   │   │   └── [slug]/page.tsx     # Individual skill page
-│   │   ├── categories/
-│   │   └── layout.tsx
-│   ├── data/
-│   │   └── skills.json             # Generated from registry
 │   ├── components/
-│   ├── lib/
-│   └── styles/
-├── next.config.ts                  # Static export
-├── package.json
-└── tsconfig.json
+│   │   ├── Dashboard.tsx       # Main dashboard
+│   │   ├── SignalCard.tsx      # Individual signal display
+│   │   ├── NewsPanel.tsx       # News aggregation
+│   │   ├── Settings.tsx        # Config (assets, Ollama endpoint)
+│   │   └── ...
+│   ├── pages/
+│   │   ├── index.tsx           # Home
+│   │   └── analysis/[id].tsx   # Detailed signal view
+│   ├── services/
+│   │   └── api.ts             # Calls backend endpoints
+│   ├── hooks/
+│   │   └── useSignals.ts      # Real-time signal fetching
+│   └── types/
+│       └── index.ts           # TypeScript interfaces
+├── vite.config.ts
+├── tailwind.config.js
+└── package.json (Node ≥18)
 ```
 
-#### 4. **`libs/core`** — @tech-leads-club/core
-Shared types and constants across packages.
+**Key Features:**
+- Live signal feed (real-time updates via polling/WebSocket)
+- Asset selector (BTC, ETH, etc.)
+- Confidence visualization (gauge or trend chart)
+- Reasoning/analysis display (LLM output)
+- Settings: Ollama endpoint, tracked assets, data sources
+- News feed aggregated by relevance to signals
 
-**Exports:**
-```typescript
-export type AgentType = 'cursor' | 'claude-code' | 'copilot' | ...;
-export type CategoryName = 'development' | 'cloud' | 'automation' | ...;
+**External APIs Called:**
+- Backend FastAPI endpoints (`GET /signals`, `POST /assets`, etc.)
 
-export interface SkillInfo {
-  name: string;
-  description: string;
-  author: string;
-  category: CategoryName;
-  compatibility: AgentType[];
-  hash: string; // SHA-256
-  tags: string[];
-}
+---
 
-export interface SkillsRegistry {
-  version: string;
-  timestamp: string;
-  skills: SkillInfo[];
-}
+### 2. **Backend (Python FastAPI)**
 
-export interface LockfileEntry {
-  skillName: string;
-  version: string;
-  installedAt: string;
-  hash: string;
-  agents: AgentType[];
-}
+**Purpose:** Orchestrate data ingestion, RAG, LLM calls; serve API to frontend
+
+**Key Directories:**
+```
+backend/
+├── app/
+│   ├── main.py                # FastAPI app + routes
+│   ├── models/
+│   │   ├── signal.py          # Signal schema (BUY/SELL/HOLD)
+│   │   ├── trade.py           # Trade history schema
+│   │   └── analysis.py        # Analysis result schema
+│   ├── services/
+│   │   ├── data_ingestion.py  # Fetch trades + news
+│   │   ├── rag_service.py     # RAG orchestration
+│   │   ├── ollama_service.py  # Mistral LLM calls
+│   │   ├── analysis_engine.py # Signal generation logic
+│   │   └── storage_service.py # DB operations
+│   ├── tasks/
+│   │   └── background.py      # Continuous data fetching
+│   ├── config.py              # Env vars (API keys, Ollama URL)
+│   └── requirements.txt        # Dependencies
+├── Dockerfile
+├── pyproject.toml
+└── .python-version
 ```
 
-#### 5. **`tools/skill-plugin`** — Nx Generator
-Scaffolding tool for creating new skills.
+**Key Dependencies:**
+- **FastAPI** — Web framework
+- **Pydantic** — Data validation
+- **SQLAlchemy** — ORM for database
+- **Requests** — HTTP client (fetch trades, news)
+- **LangChain** (or custom) — RAG orchestration
+- **Ollama Python client** — Mistral inference
+- **APScheduler** (or Celery) — Background tasks
 
-**Command:**
-```bash
-nx g @tech-leads-club/skill-plugin:skill my-skill --category=development
+**Endpoints:**
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/signals` | List recent signals |
+| `GET` | `/signals/{id}` | Get signal detail + reasoning |
+| `POST` | `/analyze` | Trigger on-demand analysis for asset |
+| `GET` | `/assets` | List tracked assets |
+| `POST` | `/assets` | Add new asset to track |
+| `GET` | `/news` | News feed (latest ingested articles) |
+| `GET` | `/health` | System health (Ollama, DB, API status) |
+
+**Background Tasks:**
+- Poll Binance/CoinGecko every 5 minutes for new trades
+- Fetch crypto news every 15 minutes from RSS feeds
+- Generate signals for all tracked assets after data update
+- Rotate/clean old data from database
+
+---
+
+### 3. **Ollama Integration (Mistral LLM)**
+
+**Purpose:** Local inference engine; generates market analysis and signals
+
+**Setup:**
+- Ollama runs locally (docker container or native installation)
+- Model: `mistral` (7B or 13B variant, depending on hardware)
+- Endpoint: `http://localhost:11434/api/generate` (or custom port)
+
+**Workflow:**
+1. Backend retrieves relevant trades + news from database (RAG step)
+2. Constructs prompt: "Given these trades and news articles, should we BUY/SELL/HOLD?"
+3. Calls Ollama `/api/generate` with prompt
+4. Parses response: extracts signal (BUY/SELL/HOLD), confidence, reasoning
+5. Stores signal + metadata in database
+6. Returns to frontend
+
+**Prompt Structure (Example):**
 ```
+You are a crypto trading analyst. Analyze the following data and provide a BUY/SELL/HOLD signal.
 
-**Generates:**
-- `skills/(category)/my-skill/SKILL.md` (template)
-- `scripts/`, `templates/`, `references/` directories
+Recent trades (last 24h):
+- BTC: 42,500 USD (volume: 150K), 42,300 USD (volume: 120K), ...
 
-#### 6. **`packages/mcp`** — MCP Server
-Model Context Protocol server for progressive skill access.
+Market sentiment (from news):
+- "Bitcoin surges on Fed announcement" (2026-06-25)
+- "Crypto regulation fears ease" (2026-06-25)
 
-**Tools Exposed:**
-- `list_skills` — Browse all skills by category
-- `search_skills` — Fuzzy search skills
-- `read_skill` — Load full SKILL.md content
-- `fetch_skill_files` — Fetch specific scripts/templates/references
-
-**Installation (Claude Code, Cursor, etc.):**
-```json
+Your analysis should be structured as JSON:
 {
-  "mcpServers": {
-    "agent-skills": {
-      "command": "npx",
-      "args": ["-y", "@tech-leads-club/agent-skills-mcp"]
-    }
-  }
+  "signal": "BUY" | "SELL" | "HOLD",
+  "confidence": 0.0-1.0,
+  "reasoning": "...",
+  "timeframe": "short-term" | "medium-term" | "long-term"
 }
+```
+
+---
+
+### 4. **Data Sources**
+
+#### Public APIs
+- **Binance API** — Real-time OHLCV data, trade history
+- **CoinGecko API** — Market data, price index
+- **Alternative.me** — Crypto fear/greed index (sentiment)
+
+#### News Feed
+- **Crypto news RSS feeds** (CoinDesk, Cointelegraph, etc.)
+- **Twitter/X API** (future) — Sentiment tracking
+- **On-chain events** (future) — Large transactions, whale activity
+
+#### Local Storage (SQLite/PostgreSQL)
+```
+Tables:
+  - trades (id, asset, price, volume, timestamp, source)
+  - news_articles (id, title, content, source, url, timestamp, asset_tags)
+  - signals (id, asset, signal, confidence, reasoning, created_at, expires_at)
+  - analysis_logs (id, signal_id, prompt, response, ollama_latency, timestamp)
 ```
 
 ---
 
 ## Data Flow
 
-### Flow 1: User Installs Skills
+### Flow 1: Continuous Data Ingestion
 
 ```
-User runs: npx @tech-leads-club/agent-skills
-                    │
-                    ▼
-        ┌──────────────────────────┐
-        │ TUI (Ink/React)          │
-        │ - Fetch registry from CDN│
-        │ - Browse/search skills   │
-        │ - Select agents          │
-        └──────────────────────────┘
-                    │
-                    ▼
-        ┌──────────────────────────┐
-        │ Installer Service        │
-        │ - Validate selections    │
-        │ - Download skill files   │
-        │   (batched, 10 concurrent)
-        │ - Cache locally          │
-        └──────────────────────────┘
-                    │
-                    ▼
-        ┌──────────────────────────┐
-        │ Agent Installation       │
-        │ - Copy or symlink        │
-        │ - to ~/.cursor/rules/    │
-        │ - ~/.claude/skills/      │
-        │ - etc.                   │
-        └──────────────────────────┘
-                    │
-                    ▼
-        ┌──────────────────────────┐
-        │ Lockfile (v2)            │
-        │ - Write .agents/         │
-        │   .skill-lock.json       │
-        │ - Atomic write           │
-        │ - Zod validation         │
-        └──────────────────────────┘
-                    │
-                    ▼
-                SUCCESS
-            Skills ready to use
+Every 5 minutes (Scheduler)
+                │
+                ▼
+┌──────────────────────────────┐
+│ Background Task             │
+│ - Fetch new trades via API  │
+│ - Fetch news articles       │
+└──────────────────────────────┘
+                │
+                ▼
+┌──────────────────────────────┐
+│ Store in Database           │
+│ (trades, news tables)       │
+└──────────────────────────────┘
+                │
+                ▼
+        Trigger Analysis
 ```
 
-### Flow 2: Release Cycle
+### Flow 2: Signal Generation (RAG + LLM)
 
 ```
-Developer pushes to main
-                    │
-                    ▼
-        ┌──────────────────────────┐
-        │ GitHub Actions CI/CD     │
-        │ - Lint (ESLint)          │
-        │ - Format check (Prettier)│
-        │ - Tests (Jest)           │
-        │ - Type check (TypeScript)│
-        └──────────────────────────┘
-                    │
-                    ▼
-        ┌──────────────────────────┐
-        │ Snyk Agent Scan          │
-        │ - Security scan all      │
-        │   skills before release  │
-        │ (incremental, if needed) │
-        └──────────────────────────┘
-                    │
-                    ▼
-        ┌──────────────────────────┐
-        │ Semantic Release         │
-        │ - Parse conventional     │
-        │   commits                │
-        │ - Generate CHANGELOG     │
-        │ - Bump versions          │
-        │ - Tag & push             │
-        └──────────────────────────┘
-                    │
-                    ▼
-        ┌──────────────────────────┐
-        │ npm publish              │
-        │ - CLI to npm registry    │
-        │ - MCP server to npm      │
-        └──────────────────────────┘
-                    │
-                    ▼
-        ┌──────────────────────────┐
-        │ Registry Update          │
-        │ - generate-registry.ts   │
-        │ - Scan all SKILL.md      │
-        │ - Compute SHA-256        │
-        │ - Create registry.json   │
-        │ - Publish to jsDelivr    │
-        └──────────────────────────┘
-                    │
-                    ▼
-        ┌──────────────────────────┐
-        │ Marketplace Deploy       │
-        │ - Build Next.js static   │
-        │ - Deploy to GitHub Pages │
-        │ - skills.json published  │
-        └──────────────────────────┘
-                    │
-                    ▼
-            Available worldwide
-            (CLI, marketplace, MCP)
+User opens dashboard
+                │
+                ▼
+┌──────────────────────────────┐
+│ Frontend requests /signals   │
+└──────────────────────────────┘
+                │
+                ▼
+┌──────────────────────────────┐
+│ Backend: Retrieve context    │
+│ - Last N trades (SQL query)  │
+│ - Relevant news (search)     │
+└──────────────────────────────┘
+                │
+                ▼
+┌──────────────────────────────┐
+│ Construct RAG prompt         │
+│ + historical context         │
+└──────────────────────────────┘
+                │
+                ▼
+┌──────────────────────────────┐
+│ Call Ollama (Mistral)        │
+│ Generate analysis + signal   │
+└──────────────────────────────┘
+                │
+                ▼
+┌──────────────────────────────┐
+│ Store signal in DB           │
+│ (signals table)              │
+└──────────────────────────────┘
+                │
+                ▼
+        Return to Frontend
+     Display signal + reasoning
+```
+
+### Flow 3: Multi-Asset Analysis
+
+```
+Asset tracking list: [BTC, ETH, SOL]
+                │
+                ├─→ Analyze BTC (parallel)
+                ├─→ Analyze ETH (parallel)
+                └─→ Analyze SOL (parallel)
+                │
+                ▼
+        Aggregate signals
+        Display on dashboard
 ```
 
 ---
 
 ## Technology Decisions
 
-### 1. **Monorepo (Nx)**
-**Decision:** Use Nx for multi-package coordination  
+### 1. **Local LLM (Ollama + Mistral)**
+**Decision:** Run LLM locally, not via API
 **Why:**
-- Shared build cache across packages
-- Consistent tooling (linting, testing, formatting)
-- Independent versioning & release per package
-- Task scheduling (affected builds)
+- No external API dependencies (privacy, latency, cost)
+- Faster iteration (can experiment with prompts locally)
+- Full control over model and inference parameters
+- POC-friendly (low ops overhead)
 
-### 2. **100% TypeScript + Strict Mode**
-**Decision:** No JavaScript, `strict: true`  
+### 2. **FastAPI for Backend**
+**Decision:** Use FastAPI over Flask or Django
 **Why:**
-- Security: Catches type mismatches early
-- Reliability: No implicit `any` (error)
-- Developer confidence: Refactoring is safe
-- Enterprise requirement: Teams expect type safety
+- Async support (efficient polling + multiple concurrent tasks)
+- Built-in OpenAPI docs
+- Pydantic validation (type safety)
+- Good performance for lightweight APIs
+- Low overhead for POC
 
-### 3. **ESM-only** (no CommonJS)
-**Decision:** Node ≥22, VM modules, no .js/.cjs dual build  
+### 3. **React + Vite for Frontend**
+**Decision:** Modern React + Vite (not Next.js)
 **Why:**
-- Future-proof (CommonJS deprecated)
-- Cleaner module system
-- Consistent across CLI + MCP + marketplace
-- Jest with `--experimental-vm-modules`
+- Fast dev server (Vite)
+- Lightweight (no SSR needed for POC)
+- TailwindCSS for rapid UI prototyping
+- TypeScript for safety
+- Can be deployed as static site if needed
 
-### 4. **CDN Distribution (jsDelivr)**
-**Decision:** Serve skills-registry.json from CDN, not npm  
+### 4. **SQLite for Phase 1**
+**Decision:** SQLite for data persistence
 **Why:**
-- Fast global download (CLI fetch)
-- Versioned URLs (immutable)
-- No npm registry dependency
-- Cache-friendly (HTTP headers)
-- Lower bandwidth costs
+- Zero external dependencies
+- Good for single-user POC
+- Upgrade to PostgreSQL in Phase 2 if needed
+- Files are easy to backup/version
 
-### 5. **Lockfile v2 (Zod-validated)**
-**Decision:** .agents/.skill-lock.json with atomic writes  
+### 5. **Docker for Containerization**
+**Decision:** Separate containers for frontend, backend, Ollama
 **Why:**
-- Auditability: Track installed skills + hashes
-- Integrity: Detect tampering or corruption
-- Reproducibility: Same skills on all machines
-- Security: Zod validation prevents injection
-
-### 6. **MCP Server**
-**Decision:** Separate MCP package for agent integration  
-**Why:**
-- Progressive disclosure (search → fetch on-demand)
-- Direct agent integration (no CLI needed)
-- Tool-based API (list_skills, search_skills, etc.)
-- Future-proof (MCP becoming standard)
-
-### 7. **Security Scanning**
-**Decision:** Snyk Agent Scan pre-release (not runtime)  
-**Why:**
-- Prevents vulnerable skills at publish time
-- No runtime overhead
-- Industry standard (MCP security)
-- Incremental scanning (SNYK_TOKEN)
+- Isolation (Ollama doesn't interfere with backend)
+- Easy local development (docker-compose)
+- Scales to full deployment later
+- Reproducibility across machines
 
 ---
 
-## Deployment Architecture
+## Deployment Model (Phase 1 - Local)
 
-### CLI Deployment
 ```
-GitHub (source code)
-    │
-    ├→ npm registry           (npx @tech-leads-club/agent-skills)
-    └→ GitHub Releases        (tagged commits)
-```
+docker-compose.yml
+  ├─ frontend (React, port 5173)
+  ├─ backend (FastAPI, port 8000)
+  ├─ ollama (Mistral, port 11434)
+  └─ postgres (optional; SQLite default)
 
-### Registry Deployment
-```
-GitHub (skills-catalog/)
-    │
-    ├→ npm (skills-registry.json in package)
-    └→ jsDelivr CDN          (fast global access)
-                  ↓
-            Downloaded by CLI on demand
+User runs: docker-compose up
+           → All services start locally
+           → Access UI at http://localhost:5173
 ```
 
-### Marketplace Deployment
-```
-GitHub (packages/marketplace/)
-    │
-    └→ GitHub Pages          (static export)
-       └→ https://tech-leads-club.github.io/agent-skills/
-```
-
-### MCP Deployment
-```
-GitHub (packages/mcp/)
-    │
-    └→ npm registry           (npx @tech-leads-club/agent-skills-mcp)
-       └→ Installed in agent config
-```
+**Future:** Add cloud deployment (AWS/GCP) and multi-user auth.
 
 ---
 
-## Security Model
+## Security Considerations
 
-### Threat Model
-1. **Malicious skill code** → Scanned with Snyk before publish
-2. **Registry tampering** → SHA-256 hashing + lockfile validation
-3. **Unauthorized installation** → User consent required per skill
-4. **Privilege escalation** → Path isolation, no `sudo`
-5. **Cache poisoning** → Lockfile validates downloaded hashes
+### Phase 1 (POC)
+- No authentication (single-user, local)
+- Ollama endpoint not exposed (localhost only)
+- Trade/news data not sensitive (public market data)
+- No secrets management (hardcoded defaults ok for POC)
 
-### Defense Layers
-1. **Pre-release scanning** — Snyk Agent Scan
-2. **Content hashing** — SHA-256 per skill
-3. **Immutable lockfile** — Zod validation, atomic writes
-4. **Path isolation** — No traversal outside agent dirs
-5. **Symlink guards** — Detect malicious links
-6. **Audit trail** — Complete operation history
+### Phase 2+ (Future)
+- Add API key authentication (user → backend)
+- Isolate Ollama (not accessible from network)
+- Encrypt database (if adding multi-user)
+- Secrets management (env vars, vault)
+- Input validation/sanitization on all APIs
 
 ---
 
-## Performance Considerations
-
-### CLI Startup
-- **Target:** <3 seconds (non-cached), <500ms (cached)
-- **Strategy:** Lazy load, cache registry, parallel downloads (10 concurrent)
-
-### Registry Fetch
-- **Target:** <500ms
-- **Strategy:** CDN (jsDelivr), HTTP caching, gzip compression
-
-### Installation
-- **Target:** <30 seconds for 5 skills
-- **Strategy:** Batched downloads, parallel extraction, progress UI
-
-### Marketplace Load
-- **Target:** <2s
-- **Strategy:** Next.js static export, CDN, image optimization
-
----
-
-## Monitoring & Observability
-
-### Metrics
-- CLI startup time
-- Registry fetch latency
-- Installation success rate
-- Skill download bandwidth
-- Error rates per agent
-- Audit trail entries
+## Observability & Monitoring
 
 ### Logging
-- Install/update/remove operations → Audit log
-- Errors → stderr
-- Debug info → environment variable (`DEBUG=agent-skills:*`)
+- Backend: FastAPI request logs + analysis logs (prompt, response, latency)
+- Ollama: Inference latency, errors
+- Frontend: Console logs for debugging
 
-### Alerting (Future)
-- High error rates
-- Snyk scan failures
-- CDN availability
+### Metrics (Phase 1)
+- Signal generation latency (target: <10 seconds)
+- Data ingestion success rate
+- Ollama availability/uptime
+- Database query latency
 
----
-
-## Future Roadmap
-
-### Short-term (Q3 2026)
-- Expand skill catalog (500+ skills)
-- Add 5+ more agents
-- Enterprise compliance features (SOC 2)
-
-### Medium-term (Q4 2026)
-- Monetization (premium skills)
-- Custom domain marketplace
-- Skill versioning & pinning
-
-### Long-term (2027)
-- Enterprise support contracts
-- Self-hosted registry option
-- Skill marketplace partnerships
+### Debugging
+- `/health` endpoint returns status of Ollama, DB, API sources
+- Analysis logs stored (prompt + response) for audit trail
 
 ---
 
-**Last Updated:** 2026-06-25  
-**Architecture Version:** 1.0  
-**Next Review:** 2026-09-25
+## Open Technical Questions
+
+- [ASSUMPTION] Mistral 7B is sufficient; may need 13B for complex reasoning
+- [QUESTION] Should signals be ephemeral (expire after 30 minutes) or persistent?
+- [QUESTION] How to handle Ollama model loading time? (warm up on startup?)
+- [QUESTION] Deterministic vs. stochastic signal generation? (set temperature=0 or allow randomness?)
+
+---
+
+**Last Updated:** 2026-06-25
+**Version:** 1.0 (POC Architecture)
+**Status:** Baseline Design
+**Next Review:** Post-Phase 1 Validation

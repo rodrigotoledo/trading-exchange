@@ -2,181 +2,205 @@
 
 ## Project Overview
 
-**Agent Skills** is a secure, validated skill registry for professional AI coding agents (Claude Code, Cursor, Copilot, Windsurf, Cline, and 16+ others). It provides verified, tested, and safe capabilities that extend AI agent functionality across development, cloud, automation, design, security, and more.
+**Trading Exchange** is a proof-of-concept AI-powered cryptocurrency analysis and trading intelligence system. It uses local LLM (Mistral via Ollama) with Retrieval-Augmented Generation (RAG) to analyze historical trade data and news, generating real-time buy/sell signals for crypto assets.
 
-## Vision & Mission
+---
 
-**Vision:** Create an ecosystem of trusted AI agent capabilities developers can confidently integrate into workflows without security concerns or market fragmentation.
+## Vision & Problem
 
-**Mission:** Build and maintain a hardened, open-source library of skills—verified, scanned, and installable across 19+ AI coding agents.
+**Vision:** Build an intelligent trading assistant that leverages AI to analyze crypto markets by combining historical trade patterns, market sentiment, and news signals into actionable trading decisions.
 
-## Problem Statement
+**Problem:**
+- Manual crypto trading analysis is time-consuming and emotion-driven
+- Existing trading bots lack context awareness (no understanding of news, market sentiment)
+- Centralized API-based solutions create privacy concerns and dependency risks
+- No unified system that combines technical analysis with AI reasoning
 
-**The Challenge:**
-- Open skill marketplaces contain ~13% critical vulnerabilities (per Snyk Agent Scan)
-- Fragmented ecosystems mean skills work differently across agents
-- No standardized security model for agent capabilities
-- Developers must choose between convenience (unsafe) and security (tedious)
+**Solution:** A local-first, LLM-powered system that ingests trade history + news, reasons about market conditions, and outputs structured trading signals (BUY/SELL/HOLD).
 
-**The Gap:**
-A managed, hardened, unified registry trusted by professional developers and teams.
+---
 
-## Core User Personas
+## Scope
 
-### Primary
-1. **Senior Software Engineers** — Want battle-tested skills for complex workflows
-2. **Architects & Tech Leads** — Need security-first capabilities and standardization
-3. **DevOps & Platform Teams** — Require auditability, compliance, and reproducibility
+### Phase 1: Real-Time Analysis (Current POC)
+**Objective:** Validate that Ollama + RAG can generate meaningful trading insights
 
-### Secondary
-1. **AI Agent Tool Authors** — Need skill distribution channels
-2. **Security-minded Teams** — Require vulnerability scanning and compliance
-3. **Open-source Contributors** — Want to contribute verified skills
+**In Scope:**
+- Fetch real-time crypto market data (trades, prices)
+- Scrape/ingest news related to crypto assets
+- Load historical trade data into RAG knowledge base
+- Use Mistral (via Ollama) to analyze market conditions
+- Generate trading signals (BUY/SELL/HOLD) with reasoning
+- Display analysis and signals via React UI
 
-## Key Features
+**Out of Scope:**
+- Automated trade execution
+- Portfolio management
+- Risk modeling / stop-loss logic
+- Advanced backtesting
 
-### 1. Skill Catalog & Registry
-- **500+ vetted, categorized skills** (development, cloud, automation, design, security, etc.)
-- Search, browse, filter by category
-- Skill metadata: description, author, category, compatibility
-- Progressive disclosure via MCP server (search → fetch on-demand)
+### Phase 2: RAG Enhancement (Future)
+- Implement persistent vector DB for trade history
+- Add semantic search over news + trade patterns
+- Improve signal quality with historical accuracy tracking
+- Add multi-timeframe analysis
 
-### 2. Installation & Lifecycle Management
-- **Multi-agent support** — Install to 19+ agents (Cursor, Claude Code, Copilot, Windsurf, Cline, Amazon Q, Augment, etc.)
-- **Dual modes** — Interactive TUI (React + Ink) or non-interactive CLI (Commander.js)
-- **Flexible scoping** — Global (user home `~/.claude/`, `~/.cursor/`) or project-local
-- **Installation methods** — Copy (default, safe) or symlink (dev-friendly)
-- **Lockfile management** — v2 format, Zod-validated, atomic writes, audit trail
+### Phase 3: Automated Trading (Future)
+- Implement paper trading first
+- Add risk management (position sizing, stop-loss)
+- Automated order execution with analysis-based signal gates
+- Portfolio tracking and P&L reporting
 
-### 3. Security & Integrity
-- **Pre-release scanning** — All skills scanned with Snyk Agent Scan before publishing
-- **Immutable integrity** — SHA-256 content hashing, lockfile-based verification
-- **Defense-in-depth** — Sanitization, path isolation, symlink guards
-- **Audit trail** — Complete operation history (install, update, remove)
-- **No binaries** — 100% open source, static analysis in CI/CD
+---
 
-### 4. Skill Structure & Quality
-- **Standardized format** — SKILL.md (YAML frontmatter + markdown body)
-- **Modular resources** — Scripts, templates, on-demand references
-- **Quality gates** — Nx generator for scaffolding, linting, formatting (Prettier, ESLint)
-- **Semantic versioning** — Independent versioning per package (cli, skills-catalog)
-- **Conventional commits** — Automated release workflows
+## Core Features (Phase 1)
 
-### 5. Distribution & CDN
-- **jsDelivr CDN** — Fast, global delivery of skills-registry.json
-- **On-demand fetching** — Batched downloads (10 concurrent), caching
-- **Offline support** — Cached at ~/.cache/agent-skills/
-- **MCP Server** — list_skills, search_skills, read_skill, fetch_skill_files tools
+### 1. Real-Time Data Ingestion
+- **Trade History:** Fetch historical trade data from public APIs (CoinGecko, Binance, etc.)
+- **News Feed:** Scrape/subscribe to crypto news sources (RSS feeds, APIs)
+- **Market Data:** Live price quotes, volume, volatility indicators
 
-### 6. Marketplace & Documentation
-- **Next.js 16 static site** — GitHub Pages deployment
-- **Interactive browsing** — Filter by category, search, read descriptions
-- **Integration docs** — Setup guides for all 19+ supported agents
-- **Developer docs** — Contributing guide, skill creation tutorials
+### 2. RAG-Powered Analysis
+- Store historical trades + news in a searchable knowledge base
+- Mistral (via Ollama) retrieves relevant context
+- LLM reasons about market conditions and generates analysis
+- Output: Structured JSON with signal, confidence, reasoning
+
+### 3. Trading Signal Generation
+- **Buy Signal:** LLM determines positive conditions (technical + sentiment)
+- **Sell Signal:** LLM identifies weakness or risk
+- **Hold Signal:** Neutral/unclear market conditions
+- Each signal includes: timestamp, asset, confidence score (0-1), reasoning
+
+### 4. Web UI (React)
+- Dashboard showing live signals for tracked assets
+- Trade history with analysis context
+- News feed aggregated by relevance to signals
+- Signal confidence trends over time
+- Settings: asset selection, Ollama endpoint config, data sources
+
+### 5. Python Backend (FastAPI)
+- API endpoints for data ingestion, analysis, signal retrieval
+- Ollama integration (local LLM calls)
+- RAG orchestration (retrieval + generation)
+- Background tasks for continuous data fetching
+- Data persistence (SQLite or PostgreSQL)
+
+---
+
+## Use Cases
+
+### Use Case 1: Crypto Trader Seeks Buy/Sell Signals
+**Actor:** Trader monitoring Bitcoin  
+**Flow:**
+1. Open dashboard, select asset (BTC)
+2. System fetches latest trades + relevant news
+3. Mistral analyzes market context via RAG
+4. Signal generated: "BUY (confidence: 0.78) — positive sentiment in news + rising volume"
+5. Trader reviews analysis and decides to act
+
+### Use Case 2: Understand Trade Recommendation Logic
+**Actor:** Same trader  
+**Flow:**
+1. Click on signal to expand details
+2. See reasoning: which news articles + trade patterns influenced the signal
+3. Audit trail: "Retrieved: 5 recent trades, 3 relevant articles, 2026-06-25 18:45 UTC"
+4. Trader gains confidence in the recommendation or dismisses it
+
+### Use Case 3: Monitor Multiple Assets
+**Actor:** Same trader  
+**Flow:**
+1. Add multiple assets to dashboard (BTC, ETH, SOL)
+2. See signals for all assets in real-time
+3. Prioritize trades based on signal confidence + market conditions
+
+---
 
 ## Technical Stack
 
-| Component | Tech | Notes |
-| --------- | ---- | ----- |
-| **CLI** | Node.js ≥22, Commander.js, Ink + React | Interactive TUI + non-interactive mode |
-| **Marketplace** | Next.js 16, React, TypeScript | Static site, GitHub Pages |
-| **MCP Server** | Node.js, @modelcontextprotocol | Skill discovery tools |
-| **Monorepo** | Nx 22.6+ | Shared cache, independent versioning |
-| **Language** | 100% TypeScript, strict mode | No `any`, type safety mandatory |
-| **Testing** | Jest 30 + ts-jest, fast-check | Unit + property-based tests |
-| **Quality** | ESLint 9, Prettier | 120 char, no semicolons, organize-imports |
-| **Security** | Snyk Agent Scan | Pre-release scanning (requires SNYK_TOKEN) |
-| **Release** | Semantic Release, conventional commits | Automated versioning (cli, skills-catalog) |
-| **Distribution** | npm registry, jsDelivr CDN | CLI via npm, registry via CDN |
+| Layer | Technology | Notes |
+|-------|-----------|-------|
+| **Frontend** | React 18, Vite, TypeScript, Tailwind CSS | Interactive UI, real-time updates |
+| **Backend** | Python 3.11+, FastAPI | API, data orchestration, RAG logic |
+| **LLM** | Mistral (via Ollama) | Local inference, no API dependencies |
+| **Data Sources** | Public APIs (Binance, CoinGecko, newsfeeds) | Real-time trades, prices, news |
+| **Storage** | SQLite / PostgreSQL | Trade history, signals, analysis logs |
+| **Containerization** | Docker | Isolated backend + frontend services |
+| **RAG Framework** | LangChain or custom | Retrieval + generation pipeline |
 
-## Core Use Cases
+---
 
-### Use Case 1: Developer Installs Skills
-**Actor:** Senior Software Engineer  
-**Flow:**
-1. Run `npx @tech-leads-club/agent-skills` in project or globally
-2. Interactive wizard: Choose skills, select agents (Cursor, Claude Code, etc.), install method
-3. Skills downloaded, cached, installed to agent directories
-4. Lockfile created (.agents/.skill-lock.json)
-5. Ready to use in IDE
+## Success Metrics (Phase 1)
 
-**Outcome:** Skills available in agent, verified safe, auditable
+### Functional
+- ✅ System successfully generates signals in <10 seconds per request
+- ✅ Signal quality: >70% of generated signals match manual trader intuition (subjective validation)
+- ✅ UI displays signals and analysis without lag
+- ✅ Data ingestion runs continuously without errors
 
-### Use Case 2: Security Team Audits Installed Skills
-**Actor:** Platform/Security Engineer  
-**Flow:**
-1. Review lockfile (.agents/.skill-lock.json) in version control
-2. Check SHA-256 hashes against published registry
-3. Run `agent-skills audit` to view operation history
-4. Confidence: no unauthorized skills, all verified
+### User Experience
+- Dashboard loads in <2 seconds
+- Signal reasoning is human-readable
+- Trader can configure assets and data sources via UI
 
-**Outcome:** Compliance, auditability, confidence
+### Engineering
+- All major components containerized and runnable locally
+- Ollama integration is stable (no connection drops)
+- Logs capture decision traces for debugging
 
-### Use Case 3: Contributor Creates & Publishes New Skill
-**Actor:** Open-source Contributor  
-**Flow:**
-1. Run `nx g @tech-leads-club/skill-plugin:skill my-skill --category=development`
-2. Author SKILL.md (description, triggers, execution details)
-3. Add scripts, templates, references as needed
-4. Push to GitHub, Snyk scan passes, merge
-5. `npm run generate:data` updates skills-registry.json
-6. Skill published to jsDelivr CDN, available worldwide
-
-**Outcome:** Contribution, community value, distribution
-
-## Success Metrics
-
-### Product Metrics
-- **Adoption:** # unique skill installations / month
-- **Catalog Growth:** # skills in registry (target: 500+)
-- **Quality:** % of skills passing Snyk scan (target: 100%)
-- **Agent Coverage:** # supported agents (target: 19+)
-
-### User Satisfaction
-- **NPS:** Net Promoter Score (via feedback)
-- **Security Confidence:** % users trust security model
-- **Usability:** Installation success rate (target: ≥95%)
-
-### Engineering Metrics
-- **Release Cadence:** Weeks between releases
-- **Test Coverage:** % of codebase covered
-- **Performance:** CLI startup time, registry fetch latency
+---
 
 ## Constraints & Assumptions
 
 ### Constraints
-- **Node ≥22** — Monorepo uses latest Node features (VM modules)
-- **Open Source Only** — No proprietary skills
-- **ESM-only** — JavaScript modules, no CommonJS
-- **Security-first** — All skills scanned before release
-- **Storage:** npm (CLI) + GitHub Pages (marketplace) + jsDelivr (registry)
+- **Local-only:** No cloud dependencies; Ollama runs on trader's machine
+- **Single-user:** POC is internal; no multi-user auth
+- **Limited computational:** Mistral model must run on modest hardware
+- **Real-time data:** Public APIs with rate limits; graceful degradation expected
+- **No live trading:** Phase 1 is analysis-only; no actual order execution
 
 ### Assumptions
-1. Developers want unified skill distribution across agents
-2. Security is a primary concern for enterprise/professional users
-3. Open source community will contribute high-quality skills
-4. MCP (Model Context Protocol) becomes standard for agent extensions
-5. AI agents continue to be the primary development tool for many engineers
+1. Mistral (via Ollama) can reason meaningfully about crypto market conditions
+2. Combining trade history + news improves signal quality over either alone
+3. Public APIs (Binance, CoinGecko) provide sufficient real-time data
+4. Trader will find RAG-generated reasoning more useful than black-box predictions
+5. Local LLM is more reliable than API-based services for this use case
 
-## Roadmap
-
-| Phase | Target | Status |
-| ----- | ------ | ------ |
-| **Phase 1: MVP** | 50+ skills, CLI + marketplace, 5 agents | ✅ Complete |
-| **Phase 2: Expansion** | 200+ skills, 10+ agents, MCP server | 🔄 In Progress |
-| **Phase 3: Enterprise** | 500+ skills, 19+ agents, SOC 2 compliance | 📅 Planned Q3 2026 |
-| **Phase 4: Ecosystem** | Premium skills, enterprise contracts, partnerships | 📅 Planned 2027 |
+---
 
 ## Out of Scope
 
-- Closed-source/proprietary skills
-- Agent development (we distribute skills, not agents)
-- Custom deployment infrastructure (GitHub Pages + CDN only)
-- Runtime execution environment (skills are static instructions)
-- Real-time skill updates (registry updates on release cycle)
+- Multi-user authentication / authorization
+- Cloud deployment (AWS, GCP, etc.)
+- Advanced portfolio optimization
+- Risk analytics (Sharpe ratio, VAR, etc.)
+- Backtesting engine
+- Automated trade execution (Phase 3 future work)
+- Model fine-tuning (using Mistral as-is)
+
+---
+
+## Roadmap
+
+| Phase | Goal | Timeline |
+|-------|------|----------|
+| **Phase 1: Validation** | Real-time signals via Ollama + RAG | Current (POC) |
+| **Phase 2: Refinement** | Improve signal quality, add vector DB, multi-timeframe | TBD |
+| **Phase 3: Automation** | Paper trading, risk gates, live execution | TBD |
+| **Future: Monetization** | Multi-user SaaS, API access, premium models | TBD |
+
+---
+
+## Open Questions & Assumptions
+
+- [ASSUMPTION] Mistral is sufficient for market reasoning; no need for larger model (Llama 70B)
+- [ASSUMPTION] SQLite is adequate for Phase 1 data persistence
+- [QUESTION] How to measure signal quality objectively? (need backtest framework or trader feedback loop)
+- [QUESTION] Should signals be deterministic (same input → same output) or allow LLM randomness?
 
 ---
 
 **Last Updated:** 2026-06-25  
-**Author:** Tech Leads Club  
-**Version:** 1.0
+**Version:** 1.0 (POC)  
+**Author:** RToledo  
+**Status:** Active Development
