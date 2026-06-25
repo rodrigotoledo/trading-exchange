@@ -53,3 +53,14 @@ out
 
 # Specs
 .specs
+
+
+_bmad/custom/*.user.toml
+_bmad/cache/
+_bmad/temp/
+_bmad-output/cache/
+_bmad-output/temp/
+
+.claude/
+.cursor/
+.windsurf/

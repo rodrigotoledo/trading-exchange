@@ -6,11 +6,9 @@
 
 ## Vision & Mission
 
-### Vision
-Create an ecosystem of trusted AI agent capabilities that developers can confidently integrate into their workflows without security concerns or market fragmentation.
+**Vision:** Create an ecosystem of trusted AI agent capabilities developers can confidently integrate into workflows without security concerns or market fragmentation.
 
-### Mission
-Build and maintain a hardened, open-source library of packaged instructions and resources (skills) that are scanned for vulnerabilities, human-curated, integrity-verified, and installable across all major AI coding agents.
+**Mission:** Build and maintain a hardened, open-source library of skills—verified, scanned, and installable across 19+ AI coding agents.
 
 ## Problem Statement
 
@@ -78,16 +76,18 @@ A managed, hardened, unified registry trusted by professional developers and tea
 
 ## Technical Stack
 
-- **Frontend:** Next.js 16 (static export), React, TypeScript
-- **Backend:** Node.js ≥22, Express (if needed)
-- **CLI:** Commander.js (non-interactive), Ink + React (interactive TUI)
-- **Monorepo:** Nx (integrated build system)
-- **Language:** 100% TypeScript, strict mode
-- **Testing:** Jest 30 + ts-jest, property-based tests (fast-check)
-- **Quality:** ESLint, Prettier (120 char width, no semicolons)
-- **Release:** Semantic Release with conventional commits
-- **Security Scanning:** Snyk Agent Scan (incremental, requires SNYK_TOKEN)
-- **Version Control:** Git, GitHub Actions CI/CD
+| Component | Tech | Notes |
+| --------- | ---- | ----- |
+| **CLI** | Node.js ≥22, Commander.js, Ink + React | Interactive TUI + non-interactive mode |
+| **Marketplace** | Next.js 16, React, TypeScript | Static site, GitHub Pages |
+| **MCP Server** | Node.js, @modelcontextprotocol | Skill discovery tools |
+| **Monorepo** | Nx 22.6+ | Shared cache, independent versioning |
+| **Language** | 100% TypeScript, strict mode | No `any`, type safety mandatory |
+| **Testing** | Jest 30 + ts-jest, fast-check | Unit + property-based tests |
+| **Quality** | ESLint 9, Prettier | 120 char, no semicolons, organize-imports |
+| **Security** | Snyk Agent Scan | Pre-release scanning (requires SNYK_TOKEN) |
+| **Release** | Semantic Release, conventional commits | Automated versioning (cli, skills-catalog) |
+| **Distribution** | npm registry, jsDelivr CDN | CLI via npm, registry via CDN |
 
 ## Core Use Cases
 
@@ -158,12 +158,14 @@ A managed, hardened, unified registry trusted by professional developers and tea
 4. MCP (Model Context Protocol) becomes standard for agent extensions
 5. AI agents continue to be the primary development tool for many engineers
 
-## Timeline & Milestones
+## Roadmap
 
-- **Phase 1 (MVP):** 50+ core skills, CLI + marketplace, 5 agents → ✅ Complete
-- **Phase 2 (Expansion):** 200+ skills, 10+ agents, MCP server → In Progress
-- **Phase 3 (Enterprise):** 500+ skills, 19+ agents, compliance features → Planned
-- **Phase 4 (Ecosystem):** Monetization (premium skills, enterprise support), partnerships
+| Phase | Target | Status |
+| ----- | ------ | ------ |
+| **Phase 1: MVP** | 50+ skills, CLI + marketplace, 5 agents | ✅ Complete |
+| **Phase 2: Expansion** | 200+ skills, 10+ agents, MCP server | 🔄 In Progress |
+| **Phase 3: Enterprise** | 500+ skills, 19+ agents, SOC 2 compliance | 📅 Planned Q3 2026 |
+| **Phase 4: Ecosystem** | Premium skills, enterprise contracts, partnerships | 📅 Planned 2027 |
 
 ## Out of Scope
 
